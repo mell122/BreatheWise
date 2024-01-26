@@ -26,16 +26,13 @@ async def github_webhook(request: Request):
     event_type = request.headers.get("X-Github-Event")
     if event_type == "push":
         # Handle "push" event
-        repo_name = "meli"
-
-        dockerfiles = ["Dockerfile1", "Dockerfile2"]  # Add more Dockerfiles as needed
-        tags = ["api-py:latest", "api-py:dev"]  # Add more tags as needed
-
-        for dockerfile, tag in zip(dockerfiles, tags):
-            path = find_file(dockerfile)
-            if path is not None:
+        repo_name = payload("repo_name")
+        tag = "api-gateway:latest"
+        path = find_file("Dockerfile")
+        if path is not None:
                 if ci(path, tag):
                     cd()
+            
 
         print({"message": f"starting Ci/Cd for {repo_name}"})
 
@@ -46,18 +43,18 @@ async def github_webhook(request: Request):
 @app.get("/test/{service}")
 def test(service):
     if service == "ci":
-        dockerfiles = ["Dockerfile1", "Dockerfile2"]  # Add more Dockerfiles as needed
-        tags = ["api-py:latest", "api-py:dev"]  # Add more tags as needed
+        tag = "api-gatway:lates"
 
-        for dockerfile, tag in zip(dockerfiles, tags):
-            path = find_file(dockerfile)
-            if path is not None:
-                if ci(path, tag):
-                    return {"build succeed"}
-                else:
-                    return {"build failed"}
+    
+        path = find_file("Dockerfile")
+        if path is not None:
+            for file in path:
+             if ci(path, tag):
+                return {"build succeed"}
             else:
-                return {"Dockerfile Not Found"}
+                return {"build failed"}
+        else:
+            return {"Dockerfile Not Found"}
 
     elif service == "cd":
         try:
@@ -84,7 +81,9 @@ def ci(path, tag):
 def cd():
     path = find_file("yml")
     if path is not None:
-        apply_kubectl(path)
+        for file in path:
+
+            apply_kubectl(file)
     else:
         return {"Error:", "kubernetes deployment file not found!"}
 
@@ -105,11 +104,12 @@ def apply_kubectl(file_path):
 def find_file(x):
     current_directory = os.getcwd()
     parent_directory = os.path.dirname(current_directory)
-
+    names = {}
     for root, dirs, files in os.walk(parent_directory):
         for file in files:
             if file.endswith(x):
-                return os.path.join(root, file)
+                 names.append(os.path.join(root, file))
+        return names 
     return None
 
 # Validation function for GitHub secret
